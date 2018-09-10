@@ -1,0 +1,493 @@
+{% include "viewer/header.html" %}
+{% load tags_custom %}
+{% load staticfiles %}
+<link rel="stylesheet" href="{% static 'viewer/css/formats.css' %}">
+<link rel="stylesheet" href="{% static 'viewer/css/formats_dark.css' %}">
+
+{% get_is_collapsed_div_filters as is_collapsed_div_filters %}
+{% get_is_collapsed_div_selections as is_collapsed_div_selections %}
+{% get_is_collapsed_div_tags as is_collapsed_div_tags %}
+
+{% get_width_filters as width_filters %}
+
+{% get_has_template_view_item as has_template_view_item %}
+
+{% get_is_allowed_editing as is_allowed_editing %}
+{% get_has_secret_token_editing as has_secret_token_editing %}
+
+{% get_dark_mode as dark_mode %}
+<script src="{% static 'viewer/js/jquery-3.3.1.min.js' %}"></script>
+
+<div id="json_url_params" data-json_url_params="{{ json_url_params }}" class="d-none"></div>
+<div id="json_filters" data-json_filters="{{ json_filters }}" class="d-none"></div>
+<div id="tag_filter_active" data-tag_filter_active="{{ tag_filter_active }}" class="d-none"></div>
+<div id="json_filters" data-json_filters="{{ json_filters }}" class="d-none"></div>
+
+<div class="row" data-kritten_resize data-kritten_resize_name="main">
+	<div class="col-md-5 col-lg-3"
+    {% if width_filters == True %}
+    {% elif width_filters == False %}
+        style="display: none"
+    {% else %}
+        style="flex-basis: {{ width_filters }}px; max-width: 100%;"
+    {% endif %}
+    >
+		<div class="row">
+			<div class="col">
+				<span id="info_number_of_items" class="text-muted">&nbsp;</span>
+			</div>
+		</div>
+        <!-- PAGINATOR -->
+		<div class="row">
+			<div class="col">
+                <nav class="input-group input-group-sm" id="info_paginator">
+                    <span class="input-group-btn">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" data-target='first' data-direction="left" disabled><i class="fa fa-fast-backward" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-target='previous' data-direction="left" disabled><i class="fa fa-backward" aria-hidden="true"></i></button>
+                        </div>
+                    </span>
+
+                    <input type="number" class="form-control" id="input_page" placeholder="page" aria-describedby="btnGroupAddon">
+
+                    <span class="input-group-btn">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary" data-target='next' data-direction="right" disabled><i class="fa fa-forward" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-target='last' data-direction="right" disabled><i class="fa fa-fast-forward" aria-hidden="true"></i></button>
+                        </div>
+                    </span>
+                </nav>
+			</div>
+		</div>
+        <hr>
+        <!-- FILTERS -->
+        <div class="row mb-3">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header py-1 px-2">
+                        <a data-toggle="collapse" href="#div_filters" class="text-muted">Filters</a>
+                        <span id="wrapper_info_filters">
+                        {% if are_filters_set == True %}
+                            <span class="float-right text-muted"> Filters are active
+                                <a href="#" id="link_reset_filters">clear</a>
+                            </span>
+                        {% else %}
+                            <span class="float-right text-muted">No filters are active</span>
+                        {% endif %}
+                        </span>
+                    </div>
+                    <div class="collapse {% if is_collapsed_div_filters == False %}show{% endif %}" id="div_filters">
+                        <div class="card-body py-1 px-2">
+                            <div class="form-group">
+                                <label for="input_filter_tags">Filter by tag(s)</label>
+                                <input name="tag" type="text" id="input_filter_tags" class="form-control form-control-sm" placeholder="Enter tag name(s)" value="">
+                                <div id="wrapper_tag_recommendations_filter"></div>
+                                <div class="row pl-1 pr-1">
+                                    <div class="col viewer__wrapper_filter_active" id="wrapper_tag_filter_active">
+                                        
+                                    </div>
+                                </div>
+                                <!-- <ul id="list_filter_tags" class="list-unstyled"> -->
+                                    <!-- {% get_tags as tags %}
+                                    {% for tag in tags %}
+                                        <li data-tag="{{ tag }}"><span class="badge badge-default">{{ tag }} <i class="fa fa-times" aria-hidden="true"></i></span></li>
+                                    {% endfor %} -->
+                                <!-- </ul> -->
+                            </div>
+                        {% for filter_custom in settings.filters %}
+                            {% if filter_custom.data_field|get_type_field:settings == 'string' or filter_custom.data_field|get_type_field:settings == 'text' %}
+                                <div class="form-group">
+                                    <label for="input_{{ filter_custom.data_field }}">{{ filter_custom.description }}</label>
+                                    <div class="input-group input-group-sm">
+                                        <input 
+                                            name="{{ filter_custom.data_field }}" 
+                                            type="text" 
+                                            id="input_{{ filter_custom.data_field }}" 
+                                            class="form-control" 
+                                            placeholder="{{ filter_custom.placeholder }}" 
+                                        >
+                                        <span class="input-group-btn">
+                                            <button 
+                                                class="btn btn-outline-secondary viewer__button_case_sensitivity" 
+                                                type="button"
+                                                data-data_field="{{ filter_custom.data_field }}" >aA
+                                            </button>
+                                        </span>
+                                        <span class="input-group-btn">
+                                            <button 
+                                                class="btn btn-primary viewer__button_add_filter_contains" 
+                                                data-data_field="{{ filter_custom.data_field }}" 
+                                                type="button">Add
+                                            </button>
+                                        </span>
+                                    </div>
+                                    <div class="row pl-1 pr-1">
+                                        <div class="col viewer__column_filter_active viewer__wrapper_filter_active" data-data_field="{{ filter_custom.data_field }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif filter_custom.data_field|get_type_field:settings == 'number' %}
+                                <div class="form-group">
+                                    <label for="input_{{ filter_custom.data_field }}">{{ filter_custom.description }}</label>
+                                    <div class="input-group input-group-sm">
+                                        <input 
+                                            name="{{ filter_custom.data_field }}" 
+                                            type="text" 
+                                            id="input_{{ filter_custom.data_field }}" 
+                                            class="form-control" 
+                                            placeholder="{{ filter_custom.placeholder }}" 
+                                        >
+                                        <span class="input-group-btn">
+                                            <button 
+                                                class="btn btn-primary viewer__button_add_filter_number" 
+                                                data-data_field="{{ filter_custom.data_field }}" 
+                                                type="button">Add
+                                            </button>
+                                        </span>
+                                    </div>
+                                    <div class="row pl-1 pr-1">
+                                        <div class="col viewer__column_filter_active viewer__wrapper_filter_active" data-data_field="{{ filter_custom.data_field }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif filter_custom.data_field|get_type_field:settings == 'boolean' %}
+                                <div class="form-group">
+                                    <label>{{ filter_custom.description }}</label>
+                                    <div>
+                                        <button type="button" data-data_field="{{ filter_custom.data_field }}" data-value="true" class="btn btn-secondary btn-sm viewer__button_boolean">True</button>
+                                        <button type="button" data-data_field="{{ filter_custom.data_field }}" data-value="false" class="btn btn-secondary btn-sm viewer__button_boolean">False</button>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                        <fieldset>
+                            <legend>Toggle columns</legend>
+                            <div class="form-check mb-0">
+                                <label class="form-check-label">
+                                    <input type="checkbox" class="form-check-input" id="input_toggle_columns_all">
+                                    Show all
+                                </label>
+                            <div class="form-check mb-0">
+                                <label class="form-check-label">
+                                    <input type="checkbox" class="form-check-input input_toggle_columns" data-column="viewer__item_selection" {% if "viewer__item_selection"|in_columns_checked:request %}checked{% endif %}>
+                                    Item selection
+                                </label>
+                            </div>
+                            {% for field in settings.displayed_fields %}
+                                {% if not field == "viewer__item_selection" and not field == "viewer__tags" %}
+                                <div class="form-check mb-0">
+                                    <label class="form-check-label">
+                                        <input type="checkbox" class="form-check-input input_toggle_columns" data-column="{{ field }}" {% if field|in_columns_checked:request %}checked{% endif %}>
+                                        {{ field|get_display_name:settings }}
+                                    </label>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                            <div class="form-check mb-0">
+                                <label class="form-check-label">
+                                    <input type="checkbox" class="form-check-input input_toggle_columns" data-column="viewer__tags" {% if "viewer__tags"|in_columns_checked:request %}checked{% endif %}>
+                                    Tags
+                                </label>
+                            </div>
+                            {% if has_template_view_item %}
+                            <div class="form-check mb-0">
+                                <label class="form-check-label">
+                                    <input type="checkbox" class="form-check-input input_toggle_columns" data-column="viewer__view_item" {% if "viewer__view_item"|in_columns_checked:request %}checked{% endif %}>
+                                    View Item
+                                </label>
+                            </div>
+                            {% endif %}
+                        </fieldset>
+                        <fieldset>
+                            <legend>Sort columns</legend>
+                            <button class="btn btn-sm btn-primary" id="toggle_popover_add_column_sorted">
+                                <i class="fa fa-plus" aria-hidden="true"></i> Add column
+                            </button>
+                            <button id="toggle_popover_apply_column_sorted" class="btn btn-sm btn-primary float-right">
+                                Apply
+                            </button>
+                            <div class="mt-1 d-none" id="wrapper_columns_sorted">
+                                
+                            </div>
+                        </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- SELECTIONS -->
+        <div class="row mb-3">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header py-1 px-2">
+                        <a data-toggle="collapse" href="#div_selections" class="text-muted">Selections</a>
+                    </div>
+                    <div class="collapse {% if is_collapsed_div_selections == False %}show{% endif %}" id="div_selections">
+                        <div class="card-body py-1 px-2">
+                            <span id="info_selected_items" class="form-text text-muted"><span data-inject="count_selected_rows">0</span> Item(s) selected</span>
+                            <hr>
+                            <button class="btn btn-sm btn-primary mb-1" id="button_select_all_items">Select all items</button>
+                            <button class="btn btn-sm btn-primary" id="button_deselect_all_items">Remove all selections</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- TAGS -->
+        <div class="row mb-3">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header py-1 px-2">
+                        <a data-toggle="collapse" href="#div_tags" class="text-muted">Tags</a>
+                        <a href="{% url 'viewer:tags' id_corpus %}" id="view_tags" class="float-right">View tags</a>
+                    </div>
+                    <div class="collapse {% if is_collapsed_div_tags == False %}show{% endif %}" id="div_tags">
+                        <div class="card-body py-1 px-2">
+                        {% if has_access_to_editing %}
+                            <div>
+                                <b>Add tags to selected items</b>
+                                <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#modal_add_tag">
+                                    <i class="fa fa-plus" aria-hidden="true"></i> Add tag
+                                </button>
+                            </div>
+                            <hr>
+                            <div>
+                                <b>Assign tag selecting items</b>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="input_add_tag" placeholder="Enter Tag-Name">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-primary" id="button_start_mode_add_tag" data-status="inactive" type="button">Start</button>
+                                    </span> 
+                                </div>
+                                <div id="wrapper_tag_recommendations_add_tag"></div>
+                            </div>
+                            <hr>
+                        {% else %}
+                                <!-- <div class="text-center">
+                                    <button type="button" data-toggle="modal" data-target="#modal_enter_token_editing" class="btn btn-sm btn-primary">Edit Tags</button>
+                                </div> -->
+                        {% endif %}
+                            <div class="text-truncate">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <td colspan="3"><label class="mb-1"><input type="checkbox" id="checkbox_tag_selection_all"> Show all</label></td>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wrapper_tags_filtered_items"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% for card in settings.cards %}
+        <div class="row mb-3">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header py-1 px-2">
+                        <a data-toggle="collapse" href="#card_custom_{{forloop.counter}}" class="text-muted">{{ card.name }}</a>
+                    </div>
+                    <div class="collapse show" id="card_custom_{{forloop.counter}}">
+                        <div class="card-body py-1 px-2">
+                            {{ card.content|safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}        
+	</div>
+	<div class="col">
+        {% if width_filters == False %}
+            <div class="resizeable_show"></div>
+        {% endif %}
+        <div class="row">
+            <div class="col">
+                <div class="alert alert-warning text-center d-none" id="alert_mode_add_tag" role="alert">
+                    <strong>Add-tag-mode</strong>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col" id="table_entities">
+                <div class="content">
+                    <div class="overlay">
+                        <!-- <div id="wrapper_loading">
+                            <i class="fa fa-refresh fa-spin"></i>
+                        </div> -->
+                    </div>
+                    <div class="table"></div>
+                </div>
+            </div>
+        </div>
+	</div>
+</div>
+
+<!-- MODAL ENTER TOKEN EDITING -->
+<div class="modal fade" id="modal_enter_token_editing">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Enter password</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="input_secret_token">Password</label>
+                    <input type="password" class="form-control" name="secret_token" id="input_secret_token">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit_enter_token_editing">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DELETE CORPUS -->
+<div class="modal fade" id="modal_delete_corpus">
+    <div class="modal-dialog" role="document">
+        <form id="form_delete_corpus">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Delete corpus</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        Do you really want to delete the corpus?
+                    </p>
+                    <p>
+                        <div class="form-check">
+                            <label class="form-check-label">
+                                <input class="form-check-input" name="keep_settings_file" type="checkbox" value="" checked>
+                                Keep settings file
+                            </label>
+                        </div>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="submit_delete_corpus">Delete</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL RELOAD CORPUS -->
+<div class="modal fade" id="modal_reindex_corpus">
+    <div class="modal-dialog" role="document">
+        <form id="form_reload_corpus">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Reload corpus</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        Do you really want to reload the corpus?
+                    </p>
+
+                    <div class="form-group">
+                        <label for="input_handle_index">Select search engine</label>
+                        <div class="row">
+                            <div class="col-12">
+                                <select id="input_handle_index" class="form-control  form-control-sm">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="submit_reindex_corpus">Reload</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EXPORT DATA -->
+<div class="modal fade" id="modal_export_data">
+    <div class="modal-dialog" role="document">
+        <form id="form_export_data">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Export</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="input_name_tag_field">Name tag field</label>
+                        <input name="name_tag_field" type="text" id="input_name_tag_field" class="form-control" value="viewer_tags">
+                    </div>
+                    <!-- <div class="alert_wrapper">
+                        <div class="alert alert-warning custom_alert" role="alert"></div>
+                    </div> -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submit_export_data">Export</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL ADD TAG -->
+<div class="modal fade" id="modal_add_tag">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Add Tag</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <span>Tag will be added to <span id="info_count_selected_items"></span> item(s).</span>
+                </div>
+                <div class="form-check mb-3">
+                    <label class="form-check-label">
+                        <input id="input_add_to_all_filtered_items" type="checkbox" class="form-check-input">
+                        Add tag to all filtered items
+                    </label>
+                </div>
+                <div class="form-group" style="position: relative">
+                    <label for="input_name_new_tag" id="label_for_input_name_new_tag">Name</label>
+                    <input name="tag" type="text" id="input_name_new_tag" class="form-control" value="" placeholder="Enter tag">
+                    <div id="wrapper_tag_recommendations_new"></div>
+                </div>
+                <div class="form-group">
+                    <label for="input_color_tag">Color</label>
+                    <input name="color" id="input_color_tag" type="color" placeholder="Enter new tag" value="#000000">
+                </div>
+                <div class="alert_wrapper">
+                    <div class="alert alert-warning custom_alert" role="alert"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit_add_tag">Add tag</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="display:none" id="data_page" data-urlparams="{{ session_json }}"></div>
+{% csrf_token %}
+
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script> -->
+<!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script> -->
+
+<script src="{% static 'viewer/js/popper.js' %}"></script>
+<script src="{% static 'viewer/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'viewer/js/recommendation.js' %}"></script>
+<script src="{% static 'viewer/js/kritten_resize.min.js' %}"></script>
+<script src="{% static 'viewer/js/helper_functions.js' %}"></script>
+<script src="{% static 'viewer/js/index_functions.js' %}"></script>
+<script src="{% static 'viewer/js/index.js' %}"></script>
+{% include "viewer/footer.html" %}

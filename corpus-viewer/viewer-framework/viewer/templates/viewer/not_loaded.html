@@ -1,0 +1,143 @@
+{% include "viewer/header.html" %}
+{% load staticfiles %}
+{% load tags_not_loaded %}
+{% csrf_token %}
+{% load humanize %}
+
+<link rel="stylesheet" href="{% static 'dashboard/css/formats.css' %}">
+<link rel="stylesheet" href="{% static 'viewer/css/formats_dark.css' %}">
+
+<div class="row">
+    <div class="col">
+        <h1>Corpus '{{ settings.name }}' not ready</h1>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+    {% check_is_loading as is_loading %}
+    {% if is_loading %}
+        <p class="lead">
+            The corpus is currently loading. Please come back later.
+        </p>
+        <p class="lead">
+            Number of indexed items: <span id="span_number_of_indexed_items" class="font-weight-bold">{{ number_of_indexed_items|intcomma }}</span>
+        </p>
+    {% else %}
+        {% if exception != None %}
+            <div class="alert alert-danger" role="alert">
+                {{ exception|prepare_for_html|linebreaksbr }}
+            </div>
+        {% endif %}
+        <p class="lead">
+            The corpus has to be indexed. This has to be done once but may take some time.
+        </p>
+        <p class="lead">
+            Start the indexing process by pressing the button below.<br>
+            <div class="form-group">
+                <label for="input_handle_index">Select search engine</label>
+                <div class="row">
+                    <div class="col-2">
+                        <select id="input_handle_index" class="form-control  form-control-sm">
+                        {% for handle_index in handle_incides %}
+                            <option value="{{ handle_index.key }}">{{ handle_index.name }}</option>
+                        {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="submit_index_corpus">Index Corpus</button>
+        </p>
+    {% endif %}
+    </div>
+</div>
+<div style="display:none" id="data_id_corpus" data-id_corpus="{{ id_corpus }}"></div>
+<script src="{% static 'viewer/js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'viewer/js/helper_functions.js' %}"></script>
+<script>
+    $(document).ready(function()
+    {
+        glob_current_corpus = $('input[name="id_corpus"]').val();
+
+        $(document).on('click', '#submit_index_corpus', function(e) { 
+            let data_reload_settings = {};
+            data_reload_settings.task = 'reload_settings';
+
+            $.ajax({
+                url: glob_current_corpus+'/get_page',
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {'X-CSRFToken':$('input[name="csrfmiddlewaretoken"]').val()},
+                data: JSON.stringify(data_reload_settings),
+                success: function(result) {
+                    console.log();
+                    if(result.success == false)
+                    {
+                        reload();
+                    } else {
+                        let data = {};
+                        data.task = 'reindex_corpus';
+                        data.class_handle_index = $('#input_handle_index').val();
+                        data.id_corpus = $('#data_id_corpus').data('id_corpus');
+
+                        $.ajax({
+                            url: glob_current_corpus+'/get_page',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            headers: {'X-CSRFToken':$('input[name="csrfmiddlewaretoken"]').val()},
+                            data: JSON.stringify(data),
+                            success: function(result) {
+                            }
+                        });
+
+                        setTimeout(reload, 1000);
+                    }
+                }
+            });
+
+
+        });
+
+        // if its currently indexing
+        if($('#span_number_of_indexed_items').length == 1) 
+        {
+            update_number_of_indexed_items()
+        }
+    });
+
+    function reload()
+    {
+        location.reload();
+    }
+
+    function update_number_of_indexed_items()
+    {
+        let data = {};
+        data.task = 'get_number_of_indexed_items';
+        data.id_corpus = $('#data_id_corpus').data('id_corpus');
+
+        let span = $('#span_number_of_indexed_items');
+
+        $.ajax({
+            url: glob_current_corpus+'/get_page',
+            method: 'POST',
+            contentType: 'application/json',
+            headers: {'X-CSRFToken':$('input[name="csrfmiddlewaretoken"]').val()},
+            data: JSON.stringify(data),
+            success: function(result) {
+                if(result.exception_occured == true) 
+                {
+                    reload();
+                } 
+
+                if(result.state_loaded == 0)
+                {
+                    location.reload();
+                } else {
+                    span.text(result.number_of_indexed_items.toLocaleString());
+                    setTimeout(update_number_of_indexed_items, 300)
+                }
+            }
+        });
+    }
+</script>
+{% include "viewer/footer.html" %}

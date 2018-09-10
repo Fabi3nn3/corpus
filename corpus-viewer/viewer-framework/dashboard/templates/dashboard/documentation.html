@@ -1,0 +1,460 @@
+{% load staticfiles %}
+{% load tags_custom_dashboard %}
+{% include "viewer/header_pure.html" %}
+
+{% get_dark_mode as dark_mode %}
+<body{% if dark_mode %} class="dark"{% endif %} data-spy="scroll" data-target="#navigationtest">
+{% csrf_token %}
+
+{% include "viewer/header_navbar.html" %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/formats_documentation.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/monokai-sublime.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/formats.css' %}">
+    <link rel="stylesheet" href="{% static 'viewer/css/formats_dark.css' %}">
+    <div class="container-fluid">
+        <div class="row mt-3">
+            <div class="col-md-9">
+                <div class="alert alert-info" role="alert">
+                    This documentation describes the usage of the corpus-viewer. To get information about the installation process please refer to the <a href="https://git.webis.de/webisstud/wstud-viewer-framework-django" class="alert-link">GitLab-page</a>.
+                </div>
+                <h2 id="link_add_new_corpus">Add a new corpus</h2>
+                To add a new corpus to the viewer on <a href="{{ url_host }}">{{ name_host }}</a> or to your own server you'll have to do the following steps:
+                <ol>
+                    <li>Make your corpus accessible to {{ name_host }} or your own server</li>
+                    <li>Create your settings file for your corpus</li>
+                    <li>Load your settings file into the server</li>
+                </ol>
+                <h3 id="link_make_corpus_accessible">Make corpus accessible</h3>
+                <h4 id="link_add_new_corpus_filesystem">Add a corpus stored as file(s)</h4>
+                    <p>
+                        You'll have to specify the data path to the corpus data in the <a href="#link_create_settings_file">settings file</a>. 
+                        This means that you have to make the corpus accessible to the host, either by directly copying or by mounting the corpus to {{ name_host }} or your own server. 
+                    </p>
+                <h4 id="link_add_new_corpus_database">Add a corpus stored in a database</h4>
+                    <ol>
+                        <li>Choose a name for your corpus in the following referred to as <code>&#x3C;name&#x3E;</code></li>
+                        <li>Go to the root directory of the django project (contains the <code>manage.py</code>)</li>
+                        <li>Create a new django app inside of the viewer with the following command: <code>python3 manage.py startapp corpus_viewer_&#x3C;name&#x3E;</code></li>
+                        <li>Add the new app to the <code>INSTALLED_APPS</code> dictionary defined in <code>viewer-framework/settings.py</code> according to the <a href="https://docs.djangoproject.com/en/2.0/ref/settings/#std:setting-INSTALLED_APPS">django documentation</a></li>
+                        <li>
+                            Create a new database entry inside in the <code>DATABASES</code> dictionary defined in <code>viewer-framework/settings.py</code> according to the <a href="https://docs.djangoproject.com/en/2.0/ref/settings/#databases">django documentation</a>.<br>
+                            <b>Important</b>: The key of the new entry has to be <code>corpus_viewer_&#x3C;name&#x3E;</code>
+                        </li>
+                        <li>Create django models from the database tables by calling <code>python3 manage.py inspectdb --database &#x3C;database_name&#x3E; &#x3E; corpus_viewer_&#x3C;name&#x3E;/models.py</main></code></li>
+                        <li>Call <code>python3 manage.py makemigrations corpus_viewer_&#x3C;name&#x3E;</code></li>
+                        <li>Call <code>python3 manage.py migrate --database corpus_viewer_&#x3C;name&#x3E;</code></li>
+                    </ol>
+
+                <h3 id="link_create_settings_file">Create settings file</h3>
+                <p>
+                    To add your corpus to the viewer, you have to tell the viewer how to load your corpus, which data of your corpus you want to be displayed, which filters you would like to have to discover your data and a lot more.
+                    All these informations are stored in the settings file, written in Python.
+                </p>
+                <p>
+                    You'll find an example settings file in the <code>settings/</code> directory or by expanding the spoiler below.<br>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="collapse" data-target="#spoiler_example_settigs_file">spoiler</button>
+                </p>
+                <div class="collapse" id="spoiler_example_settigs_file">
+                <pre><code class="python">{{example_setting_file}}</code></pre>
+                </div>
+                <p>
+                    Mainly the settings file consists of a python dictionary which has to be called 'DICT_SETTINGS_VIEWER'. The keys specify the names of the settings and the values the corresponding values. 
+                    <div class="alert alert-info">Note that the example settings file contains all available dictionary keys for presentation purpose. Unused or incorrect keys are ignored by the viewer.</div>
+                </p>
+                <p>
+                    Try to choose a descriptive name for the settings file. The name has to be unique related to the other settings files in the <code>settings/</code> directory.
+                </p>
+                <h4>Options</h4>
+                <p>
+                    The following table lists all required and optional key-value-pairs in the dictionary.
+                </p>
+                <table class="table table-sm table-striped table-responsive table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Type</th>
+                            <th>Necessity</th>
+                            <th>default</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>name</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td></td>
+                            <td><p>The name of the corpus. This name will appear on the overview of all corpora and on the viewer-page itself.</p></td>
+                        </tr>
+                        <tr>
+                            <td>description</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>''</td>
+                            <td>
+                                <p>A description of the corpus. This description will appear on the overview of all corpora to help users to manage the corpora.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>data_type</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td></td>
+                            <td>
+                                <p>Possible values: <code>'csv-file'</code>, <code>'ldjson-file'</code> or <code>'custom'</code></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>data_path</td>
+                            <td>string</td>
+                            <td class="text-warning">depends</td>
+                            <td></td>
+                            <td>
+                                <p>Required if the <code>data_type</code> is either <code>'csv-file'</code> or <code>'ldjson-file'</code></p>
+                                <p>Path to the file of the corpus.</p>
+                                <p>If this path is relative, it describes the location of the file relative to the directory of the server/django-project</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>data_structure</td>
+                            <td>list</td>
+                            <td class="text-warning">depends</td>
+                            <td></td>
+                            <td>
+                                <p>Required if the <code>data_type</code> is either <code>'csv-file'</code> or <code>'ldjson-file'</code></p>
+                                <p>
+                                    A list of strings. Each string specifies one attribute of the data.
+                                </p>
+                                <p>
+                                    If <code>data_type</code> is <code>'csv-file'</code>, the order of the attributes has to correspond to the order of rows in the file. 
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>load_data_function</td>
+                            <td>function</td>
+                            <td class="text-warning">depends</td>
+                            <td></td>
+                            <td>
+                                <p>Required if the <code>data_type</code> is <code>'custom'</code></p>
+                                <p>
+                                    This function is used to load the data from your corpus and has to be specified in the settings file.
+                                </p>
+                                <p>
+                                    Parameters:<br>
+                                        <code>item_handle</code>
+                                        This is the handle you have to use to add items of your corpus to the viewer.<br>
+                                        For this <code>item_handle</code> provides the function <code>add(dict_item)</code> which takes a dictionary with the corresponding fields of your corpus as keys.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>data_fields</td>
+                            <td>dictionary</td>
+                            <td class="text-danger">required</td>
+                            <td></td>
+                            <td>
+                                <p>
+                                    This dictionary contains all data fields which should be registered to the viewer.
+                                </p>
+                                <p>
+                                    The key specifies the name of the field and the value is a <a href="#link_data_fields">data field</a>
+                                </p>
+                                <p>
+                                    The specified data fields are a subset of the attributes in the corpus.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>id</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td></td>
+                            <td>
+                                <p>
+                                    Specifies the data field considered as the ID of the corpus. The values of the field should be unique.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>displayed_fields</td>
+                            <td>list</td>
+                            <td class="text-danger">required (?)</td>
+                            <td></td>
+                            <td>
+                                <p>
+                                    A list of data field names which should be displayed in the viewer.
+                                </p>
+                                <p>
+                                    The specified data fields are a subset of the data fields specified in <code>data_field</code>.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>page_size</td>
+                            <td>int</td>
+                            <td class="text-success">optional</td>
+                            <td>25</td>
+                            <td>
+                                <p>
+                                    This number specifies the amount of items showed on one page in the viewer.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>filters</td>
+                            <td>list</td>
+                            <td class="text-success">optional</td>
+                            <td>[]</td>
+                            <td>
+                                <p>
+                                    A list of <a href="#link_filters">filter</a> objects which should be available in the viewer.
+                                </p>
+                                <p>
+                                    The order of the filters determine the order of appearance in the viewer.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>secret_token</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>None</td>
+                            <td>
+                                <p>
+                                    Specifies the token string necessary to access the corpus. 
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>secret_token_editing</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>None</td>
+                            <td>
+                                <p>
+                                    Specifies the token string necessary to access the editing functionalities.
+                                </p>
+                                <p>
+                                    If you want to enable the editing by default, choose <code>''</code> as token.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>template_html</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>None</td>
+                            <td>
+                                <p>
+                                    Specifies the HTML template to render an item of the corpus. 
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>template_path</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>None</td>
+                            <td>
+                                <p>
+                                    Specifies the path to a HTML template file to render an item of the corpus. 
+                                </p>
+                                <p>
+                                    This property is ignored if <code>template_html</code> is specified.
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h4 id="link_data_fields">Data Fields</h4>
+                <table class="table table-sm table-striped table-responsive table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Type</th>
+                            <th>Necessity</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>type</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td>
+                                <p>
+                                    Possible values:<br>
+                                        <code>'number'</code>
+                                        Use this for any numeric value<br>
+                                        <code>'string'</code>
+                                        Use this for short strings. They won't be wrapped in the viewer.<br>
+                                        <code>'text'</code>
+                                        Use this for long string. They will be truncated in the viewer and one can hover over or click on the respective column to expand the whole text.
+                                        <code>'boolean'</code>
+                                        Use this for boolean values.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>display_name</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td>
+                                <p>
+                                    This will be the displayed name of the corresponding column in the viewer.
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h4 id="link_filters">Filters</h4>
+                <table class="table table-sm table-striped table-responsive table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Type</th>
+                            <th>Necessity</th>
+                            <th>Default</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>data_field</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td></td>
+                            <td>
+                                <p>
+                                    This specifies the data field the filter should be applied to.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>name</td>
+                            <td>string</td>
+                            <td class="text-danger">required</td>
+                            <td></td>
+                            <td>
+                                <p>
+                                    This will be the displayed name of the filter in the viewer.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>placeholder</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>''</td>
+                            <td>
+                                <p>
+                                    This specifies the placeholder displayed inside of the input field.
+                                </p>
+                            </td>
+                        </tr>
+                        <!-- <tr>
+                            <td>default_value</td>
+                            <td>string</td>
+                            <td class="text-success">optional</td>
+                            <td>''</td>
+                            <td>
+                                <p>
+                                    This specifies the default value which should be automatically inserted into the input field.
+                                </p>
+                            </td>
+                        </tr> -->
+                    </tbody>
+                </table>                    
+                <h3 id="link_add_settings_file">Load settings file</h3>
+                <p>
+                    <ol>
+                        <li>Copy the created settings file into the <code>settings/</code>-folder</li>
+                        <li>Hit the refresh button in the dashboard</li>
+                    </ol>
+                </p>
+                <h2 id="link_miscellaneous">Miscellaneous</h2>
+                    <h3>Renaming of the settings file</h3>
+                    <ul>
+                        <li><b>If the index is already indexed:</b> delete the corpus via the UI</li>
+                        <li>Rename the file</li>
+                        <li>Hit the refresh button in the dashboard</li>
+                    </ul>
+                    <h3>Create a custom view for the corpus items</h3>
+                    <p>
+                        You can write a HTML template to visualize a corpus item.
+                    </p>
+                    <p>
+                        CSS code can be inserted by using the <code>&lt;style&gt;</code> tag.<br>
+                        You can use the following css libraries out of the box: 
+                        <ul>
+                            <li>Bootstrap (v4.0.0-beta)</li>
+                            <li>Font Awesome (4.7.0)</li>
+                        </ul>
+                    </p>
+                    <p>
+                        Javascript code can be used by using the <code>&lt;script&gt;</code> tag.
+                        You can use the following javascript libraries out of the box: 
+                        <ul>
+                            <li>Bootstrap (v4.0.0-beta)</li>
+                            <li>jQuery (3.1.1)</li>
+                        </ul>
+                        You have access to a global javascript variable called <code>obj_item</code> which is a javascript object and represents the current item. The properties of the object correspond to the data fields specified in the settings.            
+                    </p>
+            </div>
+            <div class="col d-xs-none d-md-block">
+                <ul class="nav flex-column" id="navigationtest">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#link_add_new_corpus">Add a new corpus</a>
+                    </li>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#link_make_corpus_accessible">Make corpus accessible</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#link_create_settings_file">Create settings file</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#link_add_settings_file">Load settings file</a>
+                        </li>
+                    </ul>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#link_miscellaneous">Miscellaneous</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+    <script src="{% static 'viewer/js/jquery-3.3.1.min.js' %}"></script>
+    <!-- <script src="{% static 'viewer/js/tether.js' %}"></script> -->
+    <script src="{% static 'viewer/js/popper.js' %}"></script>
+    <script src="{% static 'viewer/js/bootstrap.min.js' %}"></script>
+    <!-- <script src="{% static 'viewer/js/helper_functions.js' %}"></script> -->
+    <!-- <script src="{% static 'viewer/js/tags.js' %}"></script> -->
+    <script src="{% static 'viewer/js/highlight.pack.js' %}"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <!-- <link rel="stylesheet" type="text/css" href="{% static 'viewer/css/formats.css' %}" /> -->
+    <script>
+        function set_session_entry(session_key, session_value, callback)
+        {
+            let data = {};
+            data.task = "set_session_entry";
+            data.session_key = session_key;
+            data.session_value = session_value;
+
+            $.ajax({
+                method: 'POST',
+                contentType: 'application/json',
+                headers: {'X-CSRFToken':$('input[name="csrfmiddlewaretoken"]').val()},
+                data: JSON.stringify(data),
+                success: function(result) {
+                    if(callback != undefined)
+                    {
+                        callback()
+                    }
+                }
+            });
+        }
+    </script>
+    {% include "viewer/footer.html" %}

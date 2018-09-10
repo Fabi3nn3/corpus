@@ -1,0 +1,20 @@
+{% include "viewer/header.html" %}
+{% load staticfiles %}
+<style>html {overflow-y: scroll}</style>
+<script src="{% static 'viewer/js/jquery-3.3.1.min.js' %}"></script>
+
+<div id="test" data-obj="{{ json_item }}"></div>
+<script>
+	let obj_item = $('#test').data('obj');
+	console.log('The user has access to the object \'obj_item\' which looks like the following:')
+	console.log(obj_item)
+</script>
+
+{{ template|safe }}
+
+
+<script src="{% static 'viewer/js/popper.js' %}"></script>
+<script src="{% static 'viewer/js/bootstrap.min.js' %}"></script>
+<script src="{% static 'viewer/js/recommendation.js' %}"></script>
+
+{% include "viewer/footer.html" %}
